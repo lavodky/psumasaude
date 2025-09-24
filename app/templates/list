@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2 style="margin-top:0">Meus exames</h2>
+  <table>
+    <thead><tr><th>ID</th><th>Paciente</th><th>Idade</th><th>Criado</th><th>Atualizado</th><th>Ações</th></tr></thead>
+    <tbody>
+      {% for e in items %}
+      <tr>
+        <td>{{ e.id }}</td>
+        <td>{{ e.patient_name or '-' }}</td>
+        <td>{{ e.age_years }}</td>
+        <td>{{ e.created_at }}</td>
+        <td>{{ e.updated_at }}</td>
+        <td style="display:flex; gap:6px; flex-wrap:wrap">
+          <a class="tag" href="{{ url_for('edit_exam', exam_id=e.id) }}">Editar</a>
+          <a class="tag" href="{{ url_for('chart', exam_id=e.id) }}">Gráfico</a>
+          <form method="post" action="{{ url_for('delete_exam', exam_id=e.id) }}" onsubmit="return confirm('Excluir exame #{{ e.id }}? Esta ação não pode ser desfeita.');">
+            <button class="btn warn" type="submit" style="padding:6px 10px">Excluir</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

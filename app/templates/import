@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2 style="margin-top:0">Importar de PDF/Imagem</h2>
+  <p class="muted">Envie um <strong>PDF</strong> ou <strong>imagem (JPG/PNG)</strong> do laudo. O sistema extrai os valores e pré-preenche o formulário para você revisar.</p>
+  <form method="post" enctype="multipart/form-data">
+    <div class="row">
+      <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg" required>
+      <button class="btn" type="submit">Importar</button>
+    </div>
+  </form>
+  <p class="muted" style="margin-top:10px">Dica: para PDFs escaneados, a leitura usa OCR. Quanto melhor a nitidez, melhor o resultado.</p>
+</div>
+{% endblock %}

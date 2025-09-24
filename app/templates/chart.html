@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  .mini-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap:12px; }
+  .mini { background:#0b1220; border:1px solid #1f2937; border-radius:12px; padding:10px 12px; }
+  .mini h4 { margin:0 0 6px 0; font-size:.95rem; color:#e5e7eb; display:flex; justify-content:space-between; gap:8px; }
+  .mini .chip { font-size:.75rem; color:#cbd5e1; }
+  .mini .status { font-size:.8rem; margin-top:6px; }
+  .status.ok { color:#22c55e; }
+  .status.bad { color:#ef4444; }
+  .status.na { color:#94a3b8; }
+  .status.warn { color:#f59e0b; }
+  .canvas-wrap { height:120px; }
+  .explain { font-size:.8rem; color:#cbd5e1; margin-top:6px; line-height:1.25; }
+  .row-actions { display:flex; gap:8px; align-items:center }
+</style>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="row row-actions">
+    <h2 style="margin:0">Exame #{{ exam.id }}</h2>
+    <a class="btn" href="{{ url_for('edit_exam', exam_id=exam.id) }}">Editar</a>
+    <form method="post" action="{{ url_for('delete_exam', exam_id=exam.id) }}" onsubmit="return confirm('Excluir exame #{{ exam.id }}? Esta ação não pode ser desfeita.');" class="right">
+      <button class="btn warn" type="submit">Excluir</button>
+    </form>
+  </div>
+  <p class="muted">Paciente: {{ exam.patient_name or '-' }} | Idade: {{ exam.age_years }} | Sexo: {{ exam.sex or '-' }}</p>
+  <div class="mini-grid">
+    {% for it in items %}
+      {% set inside = (it.low is not none and it.high is not none and it.value is not none and it.value >= it.low and it.value <= it.high) %}
+      {% set hasref = (it.low is not none and it.high is not none) %}
+      {% if hasref and inside and (it.high - it.low) > 0 %}
+        {% set span = (it.high - it.low) %}
+        {% set near_low = ((it.value - it.low) / span) <= 0.05 %}
+        {% set near_high = ((it.high - it.value) / span) <= 0.05 %}
+      {% else %}
+        {% set near_low = false %}
+        {% set near_high = false %}
+      {% endif %}
+      <div class="mini">
+        <h4>
+          <span>{{ it.label }}</span>
+          <span class="chip">{{ it.unit }}</span>
+        </h4>
+        <div class="row" style="align-items:center; margin-bottom:6px">
+          <span class="muted">Valor:</span>
+          <strong style="margin-left:6px">{{ ('%.4g' % it.value) if it.value is not none else '-' }}</strong>
+          {% if hasref %}
+            <span class="muted" style="margin-left:auto">Ref: {{ it.low }}–{{ it.high }}</span>
+          {% else %}
+            <span class="muted" style="margin-left:auto">Ref: —</span>
+          {% endif %}
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="c_{{ loop.index }}"></canvas>
+        </div>
+        {% if not hasref %}
+          <div class="status na">Sem referência para idade/sexo.</div>
+        {% elif not inside %}
+          <div class="status bad">Fora do esperado.</div>
+        {% elif near_low and near_high %}
+          <div class="status warn">Dentro, mas muito perto dos dois limites (faixa estreita).</div>
+        {% elif near_low %}
+          <div class="status warn">Dentro, mas muito perto do limite inferior.</div>
+        {% elif near_high %}
+          <div class="status warn">Dentro, mas muito perto do limite superior.</div>
+        {% else %}
+          <div class="status ok">Dentro do esperado.</div>
+        {% endif %}
+        <p class="explain">{{ it.desc }}</p>
+      </div>
+    {% endfor %}
+  </div>
+  <script>
+    {% for it in items %}
+      (function(){
+        const ctx = document.getElementById('c_{{ loop.index }}').getContext('2d');
+        const lo = {{ it.low if it.low is not none else 'null' }};
+        const hi = {{ it.high if it.high is not none else 'null' }};
+        const v  = {{ it.value if it.value is not none else 'null' }};
+        const neutral = 'rgba(148,163,184,1)';
+        const green   = 'rgba(34,197,94,1)';
+        const red     = 'rgba(239,68,68,1)';
+        const amber   = 'rgba(245,158,11,1)';
+        function pointColor(v, lo, hi){
+          if (v === null || lo === null || hi === null) return neutral;
+          if (v < lo || v > hi) return red;
+          const span = hi - lo;
+          if (span > 0) {
+            const nearLow = (v - lo) / span <= 0.05;
+            const nearHigh = (hi - v) / span <= 0.05;
+            if (nearLow || nearHigh) return amber;
+          }
+          return green;
+        }
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ['A', 'B'],
+            datasets: [
+              { label:'Ref. inferior', data:[lo, lo], borderColor:'rgba(148,163,184,0.6)', borderDash:[6,6], pointRadius:0, tension:0 },
+              { label:'Ref. superior', data:[hi, hi], borderColor:'rgba(148,163,184,0.6)', borderDash:[6,6], pointRadius:0, tension:0 },
+              { label:'Valor', data:[null, v], pointBackgroundColor:pointColor(v,lo,hi), pointBorderColor:pointColor(v,lo,hi), pointRadius:5, borderColor:'rgba(56,189,248,0.9)', borderWidth:2, tension:0.2 }
+            ]
+          },
+          options: {
+            responsive:true, maintainAspectRatio:false,
+            elements:{ line:{ fill:false } },
+            plugins:{ legend:{ display:false } },
+            scales:{
+              x:{ display:false, grid:{ display:false } },
+              y:{ beginAtZero:false, grid:{ color:'rgba(51,65,85,0.25)' }, ticks:{ color:'#cbd5e1', font:{ size:10 } } }
+            }
+          }
+        });
+      })();
+    {% endfor %}
+  </script>
+</div>
+{% endblock %}

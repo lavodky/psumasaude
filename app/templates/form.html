@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <h2 style="margin-top:0">Registrar/Editar exame</h2>
+  <form method="post" action="{{ url_for('edit_exam', exam_id=exam_id) if exam_id else url_for('home') }}">
+    <div class="row">
+      <div style="flex:1; min-width:260px">
+        <label>Nome do paciente (opcional)</label>
+        <input name="patient_name" value="{{ form.patient_name or '' }}">
+      </div>
+      <div style="width:160px">
+        <label>Sexo (opcional)</label>
+        <select name="sex">
+          <option value="">--</option>
+          <option value="M" {{ 'selected' if form.sex=='M' }}>Masculino</option>
+          <option value="F" {{ 'selected' if form.sex=='F' }}>Feminino</option>
+        </select>
+      </div>
+      <div style="width:160px">
+        <label>Idade (anos) *</label>
+        <input name="age_years" type="number" min="0" required value="{{ form.age_years or '' }}">
+      </div>
+    </div>
+    <p class="muted" style="margin-top:12px">Preencha os marcadores desejados (os demais podem ficar em branco).</p>
+    <div class="grid" style="margin-top:12px">
+      {% for label, key, unit, ph in fields %}
+      <div>
+        <label>{{ label }} <span class="muted">({{ unit }})</span></label>
+        <input name="f_{{ key }}" placeholder="{{ ph }}" value="{{ form.get(key, '') }}">
+      </div>
+      {% endfor %}
+    </div>
+    <div class="row" style="margin-top:16px">
+      <button class="btn primary" type="submit">Salvar</button>
+      {% if exam_id %}
+      <a class="btn" href="{{ url_for('chart', exam_id=exam_id) }}">Ver gráfico</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}
